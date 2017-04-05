@@ -1,0 +1,24 @@
+{
+  "name": "avm",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:wakamsha/avm.git",
+  "author": "wakamsha <wakamsha@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "haxe": "haxe compile.hxml",
+    "watch": "bash bin/watch.sh",
+    "build": "bash bin/build.sh"
+  },
+  "devDependencies": {
+    "browser-sync": "^2.18.8",
+    "browserify": "^14.3.0",
+    "pug": "^2.0.0-beta11",
+    "pug-cli": "^1.0.0-alpha6",
+    "stylus": "^0.54.5",
+    "tsify": "^3.0.1",
+    "typescript": "^2.2.2",
+    "watch": "^1.0.2",
+    "watchify": "^3.9.0"
+  }
+}

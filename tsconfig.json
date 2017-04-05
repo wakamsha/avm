@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmitOnError": true,
+    "strictNullChecks": false,
+    "outDir": "public"
+  },
+  "include": [
+    "example/**/*.ts"
+  ],
+  "files": [
+    "example/main.ts",
+    "node_modules/typescript/lib/lib.es6.d.ts"
+  ]
+}
