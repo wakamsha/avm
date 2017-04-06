@@ -21,7 +21,7 @@
     "example/**/*.ts"
   ],
   "files": [
-    "example/main.ts",
+    "example/scripts/main.ts",
     "node_modules/typescript/lib/lib.es6.d.ts"
   ]
 }

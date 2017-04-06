@@ -1,8 +1,32 @@
 .recorded-list
     min-width 200px
 
-.swf-object
-    width 100%
+.swf-wrapper
+    $width-default = 280px
+    $height-default = 200px
+
+    display inline-block
+    position fixed
+    z-index 1000
+    left -1000px
+    transition background 0s ease 200ms
+    > object
+        width $width-default
+        height $height-default
+        outline none
+        position absolute
+    &--visible
+        width auto
+        background rgba(black, .3)
+        top 0
+        left 0
+        right 0
+        bottom 0
+        > object
+            top 50%
+            left 50%
+            margin-top ($height-default / -2)
+            margin-left ($width-default / -2)
 
 .player
     display flex
@@ -16,5 +40,5 @@
             padding-right 20px
 
 .log
-    height 36em
+    height 6em
     line-height 1.8em

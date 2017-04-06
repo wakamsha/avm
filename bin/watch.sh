@@ -16,7 +16,7 @@ stylus_pid=$!
 trap "kill -15 $stylus_pid &>/dev/null" 2 15
 
 # Compile TypeScript sources
-nohup watchify -d ./example/main.ts -p [ tsify --noUnusedLocals=false --noUnusedParameters=false ] -o public//main.js &
+nohup watchify -d ./example/scripts/main.ts -p [ tsify --noUnusedLocals=false --noUnusedParameters=false ] -o public//main.js &
 watchify_pid=$!
 trap "kill -15 $watchify_pid $>/dev/null" 2 15
 
