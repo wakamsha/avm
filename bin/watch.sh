@@ -16,9 +16,9 @@ stylus_pid=$!
 trap "kill -15 $stylus_pid &>/dev/null" 2 15
 
 # Compile TypeScript sources
-nohup tsc -p ./ -w &
-tsc_pid=$!
-trap "kill -15 $tsc_pid &>/dev/null" 2 15
+nohup watchify -d ./example/main.ts -p [ tsify --noUnusedLocals=false --noUnusedParameters=false ] -o public//main.js &
+watchify_pid=$!
+trap "kill -15 $watchify_pid $>/dev/null" 2 15
 
 # Compile Haxe sources
 nohup watch "haxe compile.hxml" src/ &

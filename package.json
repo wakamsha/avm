@@ -20,5 +20,14 @@
     "typescript": "^2.2.2",
     "watch": "^1.0.2",
     "watchify": "^3.9.0"
+  },
+  "dependencies": {
+    "@cycle/base": "^4.3.0",
+    "@cycle/dom": "^17.1.0",
+    "@cycle/run": "^3.1.0",
+    "@cycle/rxjs-run": "^7.0.0",
+    "@types/swfobject": "^2.2.27",
+    "rxjs": "^5.3.0",
+    "xstream": "^10.4.0"
   }
 }

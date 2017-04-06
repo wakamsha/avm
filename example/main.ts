@@ -1,162 +1,242 @@
-interface Window {
-    [propName: string]: any;
+/// <reference path="../node_modules/@types/swfobject/index.d.ts" />
+import {Observable as O, Subject} from 'rxjs';
+import {Observable as XObservable} from 'xstream';
+import {DOMSource} from '@cycle/dom/rxjs-typings';
+import {VNode, div, button, makeDOMDriver, span, i, footer, hr} from '@cycle/dom';
+import {run} from '@cycle/rxjs-run';
+
+type Sources = {
+    DOM: DOMSource;
+    Record: O<RecordOutput>;
 }
 
-class MicStatus {
-    /** マイクが利用できない環境の場合 */
-    static MIC_DISABLE = "micDisable";
-    /**マイク利用可否のダイアログで「拒否」を選択された場合 */
-    static MIC_DENIED = "micDenied";
-    /** マイク利用可否のダイアログで「許可」を選択された場合 */
-    static MIC_ENABLE =  "micEnable";
+type Sinks = {
+    DOM: O<VNode>;
+    Record: O<RecordInput>;
 }
 
-class ManagerStatus {
-    /** 録音中 */
-    static MANAGER_RECORDING = "managerRecording";
-    /** 録音した音声を再生中 */
-    static MANAGER_PLAYING = "managerPlaying";
-    /** マイクアクセス準備中 */
-    static MANAGER_PREPARATION = "managerPreparation";
-    /** マイクアクセス可能 & 待機中 */
-    static MANAGER_ON_READY = "managerOnReady";
-    /** マイクアクセスできず & 録音不可 */
-    static MANAGER_SUSPENDED = "managerSuspended";
+type RecordInput = {
+    type: 'setup' | 'record-start' | 'record-stop' | 'sound-stop';
+    category: string;
+} | {
+    type: 'sound-play';
+    id: string;
+}
+
+type RecordOutput = {
+    type: 'managerRecording' | 'managerPlaying' | 'managerPreparation' | 'managerOnReady' | 'managerSuspended';
+    recordId?: string;
+};
+
+type RecordDriverOptions = {
+    replaceElementId: string;
+    swfId: string;
+    callbackNamespace: string;
+    width: number;
+    height: number;
+    version: number;
+    debugMode: boolean;
 }
 
 
-const FLASH_CONTENT_NAME = 'sound-recorder';
-
-/**
- * 埋め込み済みの swf オブジェクトを取得する
- * @param movieName
- * @returns any
- */
-const getFlashMovie = (movieName: string): any => {
-    return <any>window[movieName];
-};
-
-/**
- * セキュリティ設定パネルを表示する
- */
-const setupSecuritySetting = () => {
-    const swfObj = getFlashMovie(FLASH_CONTENT_NAME);
-    swfObj.setupSecuritySetting();
-};
-
-/**
- * 録音を開始する
- */
-const startRecording = () => {
-    // ログをリセットする
-    logArea.innerHTML = '';
-
-    const swfObj = getFlashMovie(FLASH_CONTENT_NAME);
-    const recordId = new Date().toLocaleString();
-    swfObj.setGain(70);
-    swfObj.startRecording(recordId);
-};
-
-/**
- * 録音を停止する
- */
-const stopRecording = () => {
-    const swfObj = getFlashMovie(FLASH_CONTENT_NAME);
-    swfObj.cancelRecording();
-};
-
-/**
- * 録音した音声を再生する
- */
-const playSound = () => {
-    const swfObj = getFlashMovie(FLASH_CONTENT_NAME);
-
-    const recordId = recordedList.value;
-
-    swfObj.playSound(recordId);
-};
-
-/**
- * 録音した音声の再生を停止する
- */
-const stopSound = () => {
-    const swfObj = getFlashMovie(FLASH_CONTENT_NAME);
-    swfObj.stopSound();
-};
-
-namespace soundRecorder {
-
-    /**
-     * マイクの状態が変化したときのイベント
-     * @param status
-     */
-    export function onChangeMicStatus(status: string) {
-        logArea.innerHTML += `[onMicStatusChange] マイクの状態は ${status} \n`;
-
-        switch (status) {
-            // マイクが利用できない環境の場合
-            case MicStatus.MIC_DISABLE:
-                alert("マイクが使えないので、マイク機器がお使いの PC に接続されているかご確認ください。");
-                break;
-            // マイク利用可否のダイアログで「拒否」を選択された場合
-            case MicStatus.MIC_DENIED:
-                alert("録音を試すには「許可」を選択ください。");
-                // 再度呼び出すだけでセキュリティーパネルを表示できる
-                setupSecuritySetting();
-                break;
-            // マイク利用可否のダイアログで「許可」を選択された場合
-            case MicStatus.MIC_ENABLE:
-                logArea.innerHTML += `録音可能な状態 \n`;
-            default:
-            // 何もしない
+function main(so: Sources): Sinks {
+    const setupAction$ = so.DOM.select('#setup').events('click').map((): RecordInput => {
+        return {
+            type: 'setup',
+            category: 'example'
+        };
+    });
+    const recordStartAction$ = so.DOM.select('#record-start').events('click').map((): RecordInput => {
+        return {
+            type: 'record-start',
+            category: 'example'
         }
-    }
-
-    /**
-     * 録音が開始されたときのイベント
-     */
-    export function onStartRecording() {
-        logArea.innerHTML += `[onStartRecording] 録音を開始しました \n`;
-    }
-
-    /**
-     * レコーダーの状態が変更したときのイベント
-     * @param status
-     */
-    export function onChangeRecorderStatus(status: string) {
-        logArea.innerHTML += `[STATUS CHANGE EVENT] ${status} \n`;
-    }
-
-    /**
-     * 録音が終了した時のイベント
-     * recordId に値が入っていれば録音成功とみなす
-     * @param recordId
-     */
-    export function onResult(recordId: string) {
-        if (recordId) {
-            const optionElement = document.createElement('option');
-            optionElement.innerHTML = recordId;
-            optionElement.setAttribute('value', recordId);
-            recordedList.add(optionElement);
-            recordedList.selectedIndex = recordedList.length - 1;
-
-            logArea.innerHTML += `[STATUS COMPLETE EVENT] 録音に成功しました : ${recordId} \n`;
-        } else {
-            logArea.innerHTML += `[STATUS COMPLETE EVENT] 録音に失敗しました : ${recordId} \n`;
+    });
+    const recordStopActions$ = so.DOM.select('#record-stop').events('click').map((): RecordInput => {
+        return {
+            type: 'record-stop',
+            category: 'example'
         }
+    });
+    const soundPlayAction$ = so.DOM.select('#sound-play').events('click').map((): RecordInput => {
+        return {
+            type: 'sound-play',
+            id: 'hoge'
+        }
+    });
+    const soundStopAction$ = so.DOM.select('#sound-stop').events('click').map((): RecordInput => {
+        return {
+            type: 'sound-stop',
+            category: 'example'
+        }
+    });
+
+    const vdom$ = so.Record.startWith({type: 'preparation'}).map(output => {
+        return div('.row', [
+            div('.col-sm-6', [
+                div('.panel.panel-default', [
+                    div('.panel-body', [
+                        span(output.type)
+                    ]),
+                    footer('.panel-footer', [
+                        button('#setup.btn.btn-default', [
+                            i('.fa.fa-cog'),
+                            ' Setup'
+                        ]),
+                        div('.btn-group', [
+                            button('#record-start.btn.btn-default', [
+                                i('.fa.fa-circle.text-danger'),
+                                ' Rec'
+                            ]),
+                            button('#record-stop.btn.btn-default', [
+                                i('.fa.fa-square'),
+                                ' Stop'
+                            ]),
+                        ]),
+                        hr(),
+                        div('.player', [
+                            div('.player__col', [
+                                div('.btn-group', [
+                                    button('#sound-play.btn.btn-default', [
+                                        i('.fa.fa-play.text-primary'),
+                                        ' Play'
+                                    ]),
+                                    button('#sound-stop.btn.btn-default', [
+                                        i('.fa.fa-square'),
+                                        ' stop'
+                                    ]),
+                                ]),
+                            ])
+                        ])
+                    ])
+                ])
+            ]),
+        ])
+    });
+
+    return {
+        DOM: vdom$,
+        Record: O.merge(setupAction$, recordStartAction$, recordStopActions$, soundPlayAction$, soundStopAction$)
+    };
+}
+
+function makeRecordDriver(driverOptions: RecordDriverOptions) {
+    return function RecordDriver(sink$: XObservable<any>) {
+        const source = new Subject();
+
+        const flashVars = {
+            callbackNamespace: driverOptions.callbackNamespace,
+            debugMode: driverOptions.debugMode
+        };
+        const params = {
+            quality: 'high',
+            bgcolor: '#596075',
+            allowscriptaccess: 'sameDomain',
+            allowfullscreen: 'true'
+        };
+        const attributes = {
+            id: driverOptions.swfId,
+            name: driverOptions.swfId,
+            aligin: "middle"
+        };
+        swfobject.embedSWF(
+            "/avm.swf",
+            driverOptions.replaceElementId,
+            `${driverOptions.width}`,
+            `${driverOptions.height}`,
+            `${driverOptions.version}`,
+            "",// fallback swf url not set
+            flashVars,
+            params,
+            attributes,
+            ({success, ref}) => {
+                if (success && ref) {
+                    // console.log(success);
+                    // console.log(ref);
+                    // TODO subject.next(ref)
+                } else {
+                    console.log('NG');
+                    // TODO subject.error(new Error('swf_unavailable'))
+                }
+            }
+        );
+
+        (<any>window)[driverOptions.callbackNamespace] = {
+            onChangeMicStatus(status: string) {
+                switch (status) {
+                    // マイクが利用できない場合
+                    case 'micDisable':
+                        break;
+                    // マイク利用可否のダイアログで「拒否」を選択された場合
+                    case 'micDenied':
+                        break;
+                    // マイク利用可否のダイアログで「許可」を選択された場合
+                    case 'micEnable':
+                        break;
+                }
+            },
+            onStartRecording() {
+                const output = {
+                    type: 'recording'
+                };
+                source.next(output);
+            },
+            onChangeRecorderStatus(status: string) {
+                const output = {
+                    type: status
+                };
+                source.next(output);
+            },
+            onResult(recordId: string) {
+                const output = {
+                    type: 'managerPreparation',
+                    recordId
+                };
+                source.next(output);
+            }
+        };
+
+        O.from(sink$)
+            .subscribe(
+                (recordInput: RecordInput) => {
+                    const swfObj = (<any>window)[driverOptions.swfId];
+                    switch (recordInput.type) {
+                        case 'setup':
+                            swfObj.setupSecuritySetting();
+                            break;
+                        case 'record-start':
+                            swfObj.startRecording('hoge');
+                            break;
+                        case 'record-stop':
+                            swfObj.cancelRecording();
+                            break;
+                        case 'sound-play':
+                            swfObj.playSound(recordInput.id);
+                            break;
+                        case 'sound-stop':
+                            swfObj.stopSound();
+                            break;
+                    }
+                }
+            );
+
+        return source;
     }
 }
 
-const setupButton     = <HTMLButtonElement>document.getElementById('setup');
-const recStartButton  = <HTMLButtonElement>document.getElementById('record-start');
-const recStopButton   = <HTMLButtonElement>document.getElementById('record-stop');
-const soundPlayButton = <HTMLButtonElement>document.getElementById('sound-play');
-const soundStopButton = <HTMLButtonElement>document.getElementById('sound-stop');
-const recordedList    = <HTMLSelectElement>document.getElementById('recorded-list');
-const logArea         = <HTMLPreElement>document.getElementById('log');
+const recordDriverOptions: RecordDriverOptions = {
+    replaceElementId: 'swf',
+    swfId: 'avm',
+    callbackNamespace: 'soundRecorder',
+    width: 300,
+    height: 240,
+    version: 24,
+    debugMode: true,
+};
 
-setupButton.addEventListener('click', () => setupSecuritySetting());
-recStartButton.addEventListener('click',() => startRecording());
-recStopButton.addEventListener('click', () => stopRecording());
-soundPlayButton.addEventListener('click', () => playSound());
-soundStopButton.addEventListener('click', () => stopSound());
+const drivers = {
+    DOM: makeDOMDriver('#app'),
+    Record: makeRecordDriver(recordDriverOptions)
+};
+
+run(main, drivers);
