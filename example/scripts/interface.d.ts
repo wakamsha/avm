@@ -5,11 +5,13 @@ import {DOMSource} from '@cycle/dom/rxjs-typings';
 export type Sources = {
     DOM: DOMSource;
     Record: O<RecordOutput>;
+    Playable: O<PlayOutput>;
 }
 
 export type Sinks = {
     DOM: O<VNode>;
     Record: O<RecordInput>;
+    Playable: O<PlayInput>;
 }
 
 export type RecordInput = {
@@ -25,7 +27,16 @@ export type RecordOutput = {
     recordId?: string;
 };
 
-export type RecordDriverOptions = {
+export type PlayInput = {
+    type: 'sound-play' | 'sound-stop';
+    id?: string;
+}
+
+export type PlayOutput = {
+    type: 'managerPlaying' | 'managerOnReady';
+}
+
+export type SWFParams = {
     replaceElementId: string;
     swfId: string;
     callbackNamespace: string;

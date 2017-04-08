@@ -1,10 +1,11 @@
-/// <reference path="../../node_modules/@types/swfobject/index.d.ts" />
 import {Observable as O} from 'rxjs';
-import {div, button, makeDOMDriver, i, footer, hr, select, option, pre, header, h3, VNode} from '@cycle/dom';
+import {div, button, makeDOMDriver, i, hr, select, option, footer, pre, header, h3, VNode} from '@cycle/dom';
 import {run} from '@cycle/rxjs-run';
-import {Sources, Sinks, RecordInput, RecordDriverOptions, RecordOutput} from './interface';
+import {Sources, Sinks, RecordInput, RecordOutput, SWFParams} from './interface';
 import {DOMSource} from '@cycle/dom/rxjs-typings';
 import {makeRecordDriver} from './makeRecordDriver';
+import {FlashManager} from './FlashManager';
+import {makePlayableDriver} from './makePlayableDriver';
 
 
 function intent(DOM: DOMSource) {
@@ -34,56 +35,52 @@ function intent(DOM: DOMSource) {
 }
 
 function view(recordOutput: RecordOutput, recordIds: string[]): VNode {
-    return div('.row', [
-        div('.col-sm-6.col-sm-offset-3', [
-            div('.panel.panel-default', [
-                header('.panel-heading', [
-                    h3('.panel-title', [
-                        i('.fa.fa-microphone'),
-                        ' Sound Recorder'
-                    ])
+    return div('.panel.panel-default', [
+        header('.panel-heading', [
+            h3('.panel-title', [
+                i('.fa.fa-microphone'),
+                ' Sound Recorder'
+            ])
+        ]),
+        div('.panel-body', [
+            div('.card.card-block', [
+                pre('#log.log', recordOutput.type)
+            ])
+        ]),
+        footer('.panel-footer', [
+            button('#setup.btn.btn-default', [
+                i('.fa.fa-cog'),
+                ' Setup'
+            ]),
+            div('.btn-group', [
+                button('#record-start.btn.btn-default', [
+                    i('.fa.fa-circle.text-danger'),
+                    ' Rec'
                 ]),
-                div('.panel-body', [
-                    div('.card.card-block', [
-                        pre('#log.log', recordOutput.type)
-                    ])
+                button('#record-stop.btn.btn-default', [
+                    i('.fa.fa-square'),
+                    ' Stop'
                 ]),
-                footer('.panel-footer', [
-                    button('#setup.btn.btn-default', [
-                        i('.fa.fa-cog'),
-                        ' Setup'
-                    ]),
+            ]),
+            hr(),
+            div('.player', [
+                div('.player__col.player__col--recorded-list', [
+                    select(
+                        '#recorded-list.form-control.recorded-list',
+                        recordIds.length ? recordIds.map(id => option({attrs: {value: id}}, id)) : option()
+                    )
+                ]),
+                div('.player__col', [
                     div('.btn-group', [
-                        button('#record-start.btn.btn-default', [
-                            i('.fa.fa-circle.text-danger'),
-                            ' Rec'
+                        button('#sound-play.btn.btn-default', [
+                            i('.fa.fa-play.text-primary'),
+                            ' Play'
                         ]),
-                        button('#record-stop.btn.btn-default', [
+                        button('#sound-stop.btn.btn-default', [
                             i('.fa.fa-square'),
-                            ' Stop'
+                            ' stop'
                         ]),
                     ]),
-                    hr(),
-                    div('.player', [
-                        div('.player__col.player__col--recorded-list', [
-                            select(
-                                '#recorded-list.form-control.recorded-list',
-                                recordIds.length ? recordIds.map(id => option({attrs: {value: id}}, id)) : option()
-                            )
-                        ]),
-                        div('.player__col', [
-                            div('.btn-group', [
-                                button('#sound-play.btn.btn-default', [
-                                    i('.fa.fa-play.text-primary'),
-                                    ' Play'
-                                ]),
-                                button('#sound-stop.btn.btn-default', [
-                                    i('.fa.fa-square'),
-                                    ' stop'
-                                ]),
-                            ]),
-                        ])
-                    ])
                 ])
             ])
         ])
@@ -103,33 +100,35 @@ function main(so: Sources): Sinks {
         actions.setup$,
         actions.recordStart$,
         actions.recordStop$,
-        actions.soundPlay$,
-        actions.soundStop$,
         so.Record.filter(output => output.micStatus === 'micDenied').mapTo({type: 'setup'})
     );
+    const play$ = O.merge(actions.soundPlay$, actions.soundStop$);
 
     const vdom$ = so.Record.startWith({type: 'managerPreparation'}).map((output: RecordOutput) => view(output, recordIds));
 
     return {
         DOM: vdom$,
-        Record: record$
+        Record: record$,
+        Playable: play$.do(console.log)
     };
 }
 
 
-const recordDriverOptions: RecordDriverOptions = {
+const swfParams: SWFParams = {
     replaceElementId: 'swf',
     swfId: 'avm',
     callbackNamespace: 'soundRecorder',
     width: 280,
     height: 200,
     version: 24,
-    debugMode: false,
+    debugMode: true,
 };
+const manager = new FlashManager(swfParams);
 
 const drivers = {
     DOM: makeDOMDriver('#app'),
-    Record: makeRecordDriver(recordDriverOptions)
+    Record: makeRecordDriver(manager),
+    Playable: makePlayableDriver(manager)
 };
 
 run(main, drivers);

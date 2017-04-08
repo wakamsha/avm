@@ -1,13 +1,17 @@
 import {Subject, Subscriber, Observable as O} from 'rxjs';
 import {Observable as XObservable} from 'xstream';
-import {RecordDriverOptions, RecordInput} from './interface';
+import {RecordInput} from './interface';
+import {FlashManager} from './FlashManager';
 
-export function makeRecordDriver(driverOptions: RecordDriverOptions) {
+export function makeRecordDriver(manager: FlashManager) {
     return function RecordDriver(sink$: XObservable<RecordInput>) {
         const source = new Subject();
         const swf$ = new O<any>(
             (observer: Subscriber<any>) => {
-                (<any>window)[driverOptions.callbackNamespace] = {
+                if (!(<any>window)['soundRecorder']) {
+                    (<any>window)['soundRecorder'] = {};
+                }
+                (<any>window)['soundRecorder'] = Object.assign((<any>window)['soundRecorder'], {
                     onChangeMicStatus(status: string) {
                         switch (status) {
                             // マイクが利用できない場合
@@ -20,10 +24,6 @@ export function makeRecordDriver(driverOptions: RecordDriverOptions) {
                                 break;
                             // マイク利用可否のダイアログで「許可」を選択された場合
                             case 'micEnable':
-                                setTimeout(() => {
-                                    const swfWrapper = document.querySelector('.swf-wrapper');
-                                    swfWrapper.classList.remove('swf-wrapper--visible');
-                                }, 0);
                                 break;
                         }
                         const output = {
@@ -51,46 +51,10 @@ export function makeRecordDriver(driverOptions: RecordDriverOptions) {
                         };
                         source.next(output);
                     }
-                };
-
-                const flashVars = {
-                    callbackNamespace: driverOptions.callbackNamespace,
-                    debugMode: driverOptions.debugMode
-                };
-                const params = {
-                    quality: 'high',
-                    bgcolor: '#596075',
-                    allowscriptaccess: 'sameDomain',
-                    allowfullscreen: 'true',
-                    wmode: 'transparent'
-                };
-                const attributes = {
-                    id: driverOptions.swfId,
-                    name: driverOptions.swfId,
-                    aligin: "middle"
-                };
-                swfobject.embedSWF(
-                    "/avm.swf",
-                    driverOptions.replaceElementId,
-                    `${driverOptions.width}`,
-                    `${driverOptions.height}`,
-                    `${driverOptions.version}`,
-                    "",// fallback swf url not set
-                    flashVars,
-                    params,
-                    attributes,
-                    ({success, ref}) => {
-                        if (success && ref) {
-                            observer.next(ref);
-                        } else {
-                            observer.error(new Error('swf_unavailable'));
-                        }
-                    }
-                );
-                return () => swfobject.removeSWF(driverOptions.replaceElementId);
+                });
+                observer.next(manager.borrow());
             }
         );
-
         O.from(sink$)
             .withLatestFrom(swf$)
             .subscribe(
@@ -98,8 +62,8 @@ export function makeRecordDriver(driverOptions: RecordDriverOptions) {
                     switch (recordInput.type) {
                         case 'setup':
                             swfObj.setupSecuritySetting();
-                            const swfWrapper = document.querySelector('.swf-wrapper');
-                            swfWrapper.classList.add('swf-wrapper--visible');
+                            // const swfWrapper = document.querySelector('.swf-wrapper');
+                            // swfWrapper.classList.add('swf-wrapper--visible');
                             break;
                         case 'record-start':
                             const recordId = new Date().toLocaleString();
@@ -107,12 +71,6 @@ export function makeRecordDriver(driverOptions: RecordDriverOptions) {
                             break;
                         case 'record-stop':
                             swfObj.cancelRecording();
-                            break;
-                        case 'sound-play':
-                            swfObj.playSound(recordInput.id);
-                            break;
-                        case 'sound-stop':
-                            swfObj.stopSound();
                             break;
                     }
                 }
