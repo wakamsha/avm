@@ -1,7 +1,7 @@
 import {Observable as O} from 'rxjs';
 import {div, button, makeDOMDriver, i, hr, select, option, footer, pre, header, h3, VNode} from '@cycle/dom';
 import {run} from '@cycle/rxjs-run';
-import {Sources, Sinks, RecordInput, RecordOutput, SWFParams} from './interface';
+import {Sources, Sinks, RecordInput, RecordOutput, SWFParams, PlayInput} from './interface';
 import {DOMSource} from '@cycle/dom/rxjs-typings';
 import {makeRecordDriver} from './makeRecordDriver';
 import {FlashManager} from './FlashManager';
@@ -96,32 +96,33 @@ function main(so: Sources): Sinks {
     });
 
     const actions = intent(so.DOM);
-    const record$ = O.merge(
+    const record$ = O.merge<RecordInput>(
         actions.setup$,
         actions.recordStart$,
         actions.recordStop$,
         so.Record.filter(output => output.micStatus === 'micDenied').mapTo({type: 'setup'})
     );
-    const play$ = O.merge(actions.soundPlay$, actions.soundStop$);
+    const play$ = O.merge<PlayInput>(actions.soundPlay$, actions.soundStop$);
 
     const vdom$ = so.Record.startWith({type: 'managerPreparation'}).map((output: RecordOutput) => view(output, recordIds));
 
     return {
         DOM: vdom$,
         Record: record$,
-        Playable: play$.do(console.log)
+        Playable: play$
     };
 }
 
 
 const swfParams: SWFParams = {
-    replaceElementId: 'swf',
+    swfUrl: './avm.swf',
+    targetSelector: '#swf',
     swfId: 'avm',
     callbackNamespace: 'soundRecorder',
     width: 280,
     height: 200,
     version: 24,
-    debugMode: true,
+    debugMode: false,
 };
 const manager = new FlashManager(swfParams);
 

@@ -7,11 +7,8 @@ export function makePlayableDriver(manager: FlashManager) {
         const source = new Subject();
         const swf$ = new O<any>(
             (observer: Subscriber<any>) => {
-                if (!(<any>window)['soundRecorder']) {
-                    (<any>window)['soundRecorder'] = {};
-                }
-                (<any>window)['soundRecorder'] = Object.assign((<any>window)['soundRecorder'], {
-                    onChangeRecorderStatus(status: string) {
+                manager.addCallbacks({
+                    onChangeRecorderStatus: (status: string) => {
                         const output = {
                             type: status
                         };

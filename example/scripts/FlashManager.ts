@@ -2,23 +2,54 @@ import {SWFParams} from './interface';
 
 export class FlashManager {
 
+    private targetElement: Element;
     private swfObj: any;
+    private callbacks: any;
 
     private baseParams: any = {
         quality: 'high',
         bgcolor: '#596075',
         allowscriptaccess: 'sameDomain',
-        allowfullscreen: 'true'
+        allowfullscreen: 'true',
+        wmode: 'transparent'
     };
 
     constructor(private swfParams: SWFParams) {
+        this.callbacks = (<any>window)[this.swfParams.callbackNamespace] = {};
         this.createSWFObject();
     }
 
+    public borrow(): any {
+        return this.swfObj;
+    }
+
+    /**
+     * SWF オブジェクト表示 / 非表示をトグルする
+     * @param visibility
+     */
+    public toggleSWFVisibility(visibility: boolean) {
+        if (visibility) {
+            this.targetElement.classList.add('swf-wrapper--visible');
+        } else {
+            this.targetElement.classList.remove('swf-wrapper--visible');
+        }
+    }
+
+    /**
+     * Flash からのコールバック関数を登録する
+     * @param callback
+     */
+    public addCallbacks(callback: any) {
+        this.callbacks = Object.assign(this.callbacks, callback);
+    }
+
+    /**
+     * swfParams から SWF オブジェクトを生成する
+     */
     private createSWFObject() {
         const obj: Element = document.createElement('object');
         obj.setAttribute('type', 'application/x-shockwave-flash');
-        obj.setAttribute('data', '/avm.swf');
+        obj.setAttribute('data', this.swfParams.swfUrl);
         obj.setAttribute('id', this.swfParams.swfId);
         obj.setAttribute('width', `${this.swfParams.width}`);
         obj.setAttribute('height', `${this.swfParams.height}`);
@@ -34,13 +65,10 @@ export class FlashManager {
         param.setAttribute('value', `callbackNamespace=${this.swfParams.callbackNamespace}&debugMode=${this.swfParams.debugMode}`);
         obj.appendChild(param);
 
-        const replaceElement = document.getElementById(this.swfParams.replaceElementId);
-        replaceElement.appendChild(obj);
+        this.targetElement = document.querySelector(this.swfParams.targetSelector);
+        this.targetElement.innerHTML = '';
+        this.targetElement.appendChild(obj);
 
         this.swfObj = (<any>window)[this.swfParams.swfId];
-    }
-
-    public borrow(): any {
-        return this.swfObj;
     }
 }

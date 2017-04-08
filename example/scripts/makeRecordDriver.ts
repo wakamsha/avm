@@ -8,10 +8,7 @@ export function makeRecordDriver(manager: FlashManager) {
         const source = new Subject();
         const swf$ = new O<any>(
             (observer: Subscriber<any>) => {
-                if (!(<any>window)['soundRecorder']) {
-                    (<any>window)['soundRecorder'] = {};
-                }
-                (<any>window)['soundRecorder'] = Object.assign((<any>window)['soundRecorder'], {
+                manager.addCallbacks({
                     onChangeMicStatus(status: string) {
                         switch (status) {
                             // マイクが利用できない場合
@@ -24,6 +21,7 @@ export function makeRecordDriver(manager: FlashManager) {
                                 break;
                             // マイク利用可否のダイアログで「許可」を選択された場合
                             case 'micEnable':
+                                manager.toggleSWFVisibility(false);
                                 break;
                         }
                         const output = {
@@ -62,8 +60,7 @@ export function makeRecordDriver(manager: FlashManager) {
                     switch (recordInput.type) {
                         case 'setup':
                             swfObj.setupSecuritySetting();
-                            // const swfWrapper = document.querySelector('.swf-wrapper');
-                            // swfWrapper.classList.add('swf-wrapper--visible');
+                            manager.toggleSWFVisibility(true);
                             break;
                         case 'record-start':
                             const recordId = new Date().toLocaleString();

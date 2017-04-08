@@ -37,7 +37,8 @@ export type PlayOutput = {
 }
 
 export type SWFParams = {
-    replaceElementId: string;
+    swfUrl: string;
+    targetSelector: string;
     swfId: string;
     callbackNamespace: string;
     width: number;
